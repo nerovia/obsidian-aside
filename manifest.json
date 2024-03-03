@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-aside",
+	"name": "Obsidian Aside",
+	"version": "1.3.2",
+	"minAppVersion": "1.3.0",
+	"description": "Create an aside section to display quick facts about a subject.",
+	"author": "nerovia",
+	"authorUrl": "https://github.com/nerovia/",
+	"isDesktopOnly": false
+}

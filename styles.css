@@ -1,0 +1,61 @@
+
+.markdown-reading-view.aside-wide div.block-language-aside {
+    float: right;
+    width: 40%;
+    margin-top: 0;
+    margin-right: 0;
+    margin-left: var(--size-4-6);
+    margin-bottom: var(--size-4-6);
+    clear: both;
+}
+
+div.block-language-aside img {
+    margin: auto;
+    margin-bottom: var(--size-4-6);
+    border-radius: var(--size-4-1);
+    display: block;
+    max-height: 400px;
+}
+
+div.block-language-aside p {
+    margin: 0;
+    width: auto;
+}
+
+div.block-language-aside small {
+    color: var(--text-muted);
+}
+
+table.aside-content {
+    width: 100%;
+    border-style: none;
+    margin: 0;
+}
+
+table.aside-content p {
+    margin: 2%;
+}
+
+table.aside-content th {
+    border-style: dotted;
+    border-width: var(--table-border-width);
+    border-left: none;
+    border-right: none;
+    text-align: left;
+}
+
+table.aside-content td {
+    border-style: dotted;
+    border-width: var(--table-border-width);
+    border-left: none;
+    border-right: none;
+    text-align: left;
+}
+
+table.aside-content tr td:first-child {
+    width: min-content;
+    font-weight: normal;
+    font-style: italic;
+}
+
+

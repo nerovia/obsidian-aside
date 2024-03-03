@@ -1,36 +1,45 @@
 # Obsidian Aside
 
-## Installation
+> An Obsidian plugin to create aside sections within your notes.
 
 ## Usage
   
-````
+- Insert a codeblock with the `aside` tag.
+- Provide your content in YAML format.
+
+The following properties are supported:
+
+| Property      | Expected Value      | Description                                                               |
+| ------------- | ------------------- |-------------------------------------------------------------------------- |
+| `thumbnail`   | Markdown Image Link | Renders the given image at the top of the aside section.                  |
+| `content`     | Object              | Renders all properties of the given object as a table of key value pairs. |
+| `sortContent` | Boolean             | Determines whether the content should be sorted alphabetically.           |
+
+### Example
+
+The following shows an example of how the aside section is displayed.
+
+````md
 ```aside
 thumbnail: '![[latissa.jpg]]'
 sortContent: false
 content:
  full name: 'Latissa Ojeda'
- gender: Female (she/her)
- alias:
-  - The Scarred
-  - 'Tiss (Strix)'
+ other names:
+  - 'The Scarred'
+  - 'Tiss (by strix)'
+ gender: 'Female (she/her)'
  race: 'Human'
- class: 'Warlock (Seabound)'
- location: '[[Brineridge]]'
- affilations:
+ class: 'Warlock'
+ home: '[[Brineridge]]'
+ affiliations:
   - '[[Captains Guild]]'
-  - '[[Alamilla Lascaris]]'
+ allies:
   - '[[Cordozar]] (first mate)'
   - '[[Arbuur Rosevolt]]'
- appearances:
-  - '[[Sessions#Session 11]]'
-  - '[[Sessions#Session 15]]'
-  - '[[Sessions#Session 17]]'
+ enemies:
+  - '[[Alamilla Lascaris]]'
 ```
 ````
 
-| Property      | Description                                                        |
-| ------------- | ------------------------------------------------------------------ |
-| `thumbnail`   | A markdown image link                                              |
-| `content`     | An object with the properties that are to be displayed.            |
-| `sortContent` | Wether the properties of `content` are to be sorted alphabetically |
+![Rendered preview](images/latissa-example.png)

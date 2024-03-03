@@ -1,4 +1,5 @@
 import { App, MarkdownRenderChild, MarkdownRenderer, Notice, Plugin, PluginSettingTab, Setting, TFile, parseYaml } from 'obsidian';
+import { stringify } from 'querystring';
 
 const CODEBLOCK_ID = 'aside'
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
@@ -135,7 +136,7 @@ class AsideRenderChild extends MarkdownRenderChild {
 				entries.forEach(([key, value]) => {
 					const str = value instanceof Array 
 						? value.join('\n') 
-						: value?.toString()
+						: String(value)
 
 					if (str) {
 						const tr = table.createEl('tr')
@@ -143,7 +144,7 @@ class AsideRenderChild extends MarkdownRenderChild {
 						const td = tr.createEl('td')
 
 						const extra = str
-							.replace(/\(.+?\)/g, it => `<small>${it}</small>`)
+							.replace(/\(.+?\)/g, (it: string) => `<small>${it}</small>`)
 							.replace(/\[{2}(.+?#(.+?))\]{2}/g, '[[$1|$2]]')
 
 						MarkdownRenderer.renderMarkdown(extra, td, this.sourcePath, this)

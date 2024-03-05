@@ -36,13 +36,13 @@ table.aside-content p {
     margin: 2%;
 }
 
-table.aside-content th {
+/* table.aside-content th {
     border-style: dotted;
     border-width: var(--table-border-width);
     border-left: none;
     border-right: none;
     text-align: left;
-}
+} */
 
 table.aside-content td {
     border-style: dotted;

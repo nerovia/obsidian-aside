@@ -1,5 +1,4 @@
 import { App, MarkdownRenderChild, MarkdownRenderer, Notice, Plugin, PluginSettingTab, Setting, TFile, parseYaml } from 'obsidian';
-import { stringify } from 'querystring';
 
 const CODEBLOCK_ID = 'aside'
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
@@ -67,7 +66,6 @@ export default class AsidePlugin extends Plugin {
 			id: 'insert-aside-command',
 			name: 'Insert Aside',
 			editorCallback: async (editor) => {
-				
 				let yaml = ''
 				if (this.settings.templatePath) {
 					const path = this.settings.templatePath
@@ -111,6 +109,7 @@ class AsideRenderChild extends MarkdownRenderChild {
 
 	onload() {
 		this.render()
+		this.registerEvent(this.app.metadataCache.on('changed', this.render.bind(this)))
 	}
 
 	render() {
@@ -119,6 +118,8 @@ class AsideRenderChild extends MarkdownRenderChild {
 			const yaml: any = parseYaml(this.sourceText)
 
 			this.element.addClass("aside-section")
+
+			console.log(`rendering ${yaml}`)
 
 			if (yaml.thumbnail) {
 				MarkdownRenderer.renderMarkdown(yaml.thumbnail, this.element, this.sourcePath, this)
@@ -140,7 +141,7 @@ class AsideRenderChild extends MarkdownRenderChild {
 
 					if (str) {
 						const tr = table.createEl('tr')
-						const th = tr.createEl('th', { text: key })
+						tr.createEl('td', { text: key })
 						const td = tr.createEl('td')
 
 						const extra = str

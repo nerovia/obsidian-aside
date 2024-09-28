@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownRenderer, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
 	templatePath: ''
@@ -82,54 +82,9 @@ export default class AsidePlugin extends Plugin {
 		// abort if the aside is not implicitly shown.
 		if (!aside.show && !aside.prefix)
 			return;
+
 		
-		// i'd rather make a new sibling, but i don't know how.
-		// so i guess we're just hijacking this container for now...
-		el.addClass('aside-container')
-
-		// append portrait image if one is present
-		if (aside.imageLink) {
-			this.appendAsideImg(el, aside.imageLink, ctx.sourcePath);
-		}
-
-		// create content table
-		const contentEl = el.createEl('table', { cls: 'aside-content' })
-
-		// append attributes to table
-		for (const [name, value] of aside.attributes) {
-			this.appendAsideAttribute(contentEl, name, value, ctx.sourcePath);
-		}
-	}
-
-	appendAsideImg(el: HTMLElement, imgLink: string, sourcePath: string) {
-		const imgPath = this.getResourceFromLink(imgLink, sourcePath);
-		if (imgPath) {
-			el.createEl('img', { attr: { src: imgPath } })
-		}
-	}
-
-	appendAsideAttribute(el: HTMLElement, name: string, value: unknown, sourcePath: string) {
-		const tr = el.createEl('tr')
-		tr.createEl('td', { text: name });
-		const td = tr.createEl('td');
-
-		const values = Array.isArray(value) ? value : [value];
-
-		values.filter(it => it).forEach(it => {
-			const div = document.createElement('div');
-			const str = String(it)
-				.replace(/\[{2}(.+?#(.+?))\]{2}/g, '[[$1|$2]]');
-			MarkdownRenderer.renderMarkdown(str, div, sourcePath, null!)
-			td.appendChild(div);
-		});
-	}
-
-	getResourceFromLink(linktext: string, sourcePath: string): string | null {
-		const path = /\[{2}(.+?)\]{2}/.exec(linktext)?.[1];
-		if (!path) return null;
-		const file = app.metadataCache.getFirstLinkpathDest(path, sourcePath);
-		if (!file) return null;
-		return app.vault.getResourcePath(file);
+		ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
 	}
 
 	onunload() { }
@@ -181,5 +136,73 @@ class AsideOptions {
 			prefix: prefix,
 			attributes: attributes,
 		}
+	}
+}
+
+class AsideRenderChild extends MarkdownRenderChild {
+	app: App;
+	sourcePath: string;
+	options: AsideOptions;
+
+	constructor(app: App, containerEl: HTMLElement, sourcePath: string, options: AsideOptions) {
+		super(containerEl);
+		this.app = app;
+		this.sourcePath = sourcePath;
+		this.options = options;
+	}
+
+	override onload(): void { this.render(); }
+
+	override onunload(): void { }
+
+	render() {
+			
+		// i'd rather make a new sibling, but i don't know how.
+		// so i guess we're just hijacking this container for now...
+		this.containerEl.addClass('aside-container', 'aside-compact');
+
+		// append portrait image if one is present
+		if (this.options.imageLink) {
+			this.appendAsideImg(this.containerEl, this.options.imageLink);
+		}
+
+		// create content table
+		const contentEl = this.containerEl.createEl('table', { cls: 'aside-content' })
+
+		// append attributes to table
+		for (const [name, value] of this.options.attributes) {
+			this.appendAsideAttribute(contentEl, name, value);
+		}
+	}
+
+	appendAsideImg(el: HTMLElement, imgLink: string) {
+		const imgPath = this.getResourceFromLink(imgLink);
+		if (imgPath) {
+			el.createEl('img', { attr: { src: imgPath } })
+		}
+	}
+
+	appendAsideAttribute(el: HTMLElement, name: string, value: unknown) {
+		const tr = el.createEl('tr')
+		tr.createEl('td', { text: name });
+		const td = tr.createEl('td');
+
+		const values = Array.isArray(value) ? value : [value];
+
+		values.filter(it => it).forEach(it => {
+			const div = document.createElement('div');
+			const str = String(it)
+				.replace(/\[{2}(.+?#(.+?))\]{2}/g, '[[$1|$2]]');
+			MarkdownRenderer.renderMarkdown(str, div, this.sourcePath, this)
+			td.appendChild(div);
+		});
+	}
+
+	getResourceFromLink(linktext: string): string | null {
+		const path = /\[{2}(.+?)\]{2}/.exec(linktext)?.[1];
+		if (!path) return null;
+		const file = app.metadataCache.getFirstLinkpathDest(path, this.sourcePath);
+		if (!file) return null;
+		return app.vault.getResourcePath(file);
 	}
 }

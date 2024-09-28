@@ -184,7 +184,7 @@ class AsideRenderChild extends MarkdownRenderChild {
 
 	appendAsideAttribute(el: HTMLElement, name: string, value: unknown) {
 		const tr = el.createEl('tr')
-		tr.createEl('td', { text: name });
+		tr.createEl('td').createEl('p', { text: name });
 		const td = tr.createEl('td');
 
 		const values = Array.isArray(value) ? value : [value];

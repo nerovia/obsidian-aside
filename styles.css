@@ -21,7 +21,7 @@
 }
 
 .aside-container p {
-    margin: 0;
+    margin: var(--size-4-1);
     width: auto;
 }
 

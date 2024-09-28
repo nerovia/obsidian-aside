@@ -1,4 +1,4 @@
-import { App, MarkdownRenderChild, MarkdownRenderer, Plugin, PluginSettingTab, Setting, parseYaml } from 'obsidian';
+import { App, MarkdownPostProcessorContext, MarkdownRenderer, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
 	templatePath: ''
@@ -45,63 +45,76 @@ export default class AsidePlugin extends Plugin {
 		this.addSettingTab(new AsideSettingTab(this.app, this))
 
 		// subscribe to reading-view resize to adjust container width
-		this.registerEvent(this.app.workspace.on('resize', () => {
-			this.app.workspace.containerEl.querySelectorAll('.markdown-reading-view').forEach(it => {
-				const bounds = it.getBoundingClientRect()
-				if (bounds.width > 600)
-					it.addClass('aside-wide')
-				else
-					it.removeClass('aside-wide')
-			})
-		}))
+		this.registerEvent(this.app.workspace.on('resize', this.onResize.bind(this)));
 
-		this.registerMarkdownPostProcessor((el, ctx) => {
+		// subscribe to post processor
+		this.registerMarkdownPostProcessor(this.onProcessAside.bind(this));
+	}
+
+	onResize() {
+		this.app.workspace.containerEl.querySelectorAll('.markdown-reading-view').forEach(it => {
+			const bounds = it.getBoundingClientRect()
+			if (bounds.width > 600)
+				it.addClass('aside-wide')
+			else
+				it.removeClass('aside-wide')
+		})
+	}
+
+	onProcessAside(el: HTMLElement, ctx: MarkdownPostProcessorContext) {
 			
-			// on frontmatter update the following element should exist.
-			// this is a hack but honestly, i don't know what to do.
-			if (!el.querySelector('.frontmatter .language-yaml')) 
-				return;
-			
-			if (!ctx.frontmatter)
-				return;
+		// on frontmatter update the following element should exist.
+		// this is a hack, but i honestly don't how to do this otherwise.
+		if (!el.querySelector('.frontmatter .language-yaml')) 
+			return;
+		
+		// abort if there's no frontmatter
+		if (!ctx.frontmatter)
+			return;
+		
+		// get options for the aside
+		const { 
+			'aside-show':show, 
+			'aside-sort':sort = true, 
+			'aside-img':imgLink = null,
+			'aside-prefix':prefix = '',
+		} = ctx.frontmatter; 
+		
+		// abort if the aside is explicitly hidden
+		if (show === false)
+			return;
+		
+		// abort if the aside is not implicitly shown.
+		if (!show && !prefix)
+			return;
+		
+		// i'd rather make a new sibling, but i don't know how.
+		// so i guess we're just hijacking this container for now...
+		el.addClass('frontmatter-aside')
 
-			const { 
-				'aside-show':show, 
-				'aside-sort':sort = true, 
-				'aside-img':imgLink = null,
-				'aside-prefix':prefix = '',
-			} = ctx.frontmatter; 
+		// append portrait image if one is present
+		if (imgLink) {
+			this.appendAsideImg(el, imgLink, ctx.sourcePath);
+		}
 
-			if (show === false)
-				return;
+		// filter attributes based on prefix
+		let attributes = Object.entries(ctx.frontmatter)
+			.filter(([k]) => !k.startsWith('aside-'))
+			.filter(([k]) => k.startsWith(prefix));
 
-			if (!show && !prefix)
-				return;
+		// sort attributes if specified
+		if (sort) {
+			attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
+		}
 
+		// create content table
+		const contentEl = el.createEl('table', { cls: 'aside-content' })
 
-			// not a fan of this either, but it has to be done.
-			el.addClass('frontmatter-aside')
-
-			if (imgLink) {
-				this.appendAsideImg(el, imgLink, ctx.sourcePath);
-			}
-
-			let attributes = Object.entries(ctx.frontmatter)
-				.filter(([k]) => !k.startsWith('aside-'))
-				.filter(([k]) => k.startsWith(prefix));
-
-			if (sort) {
-				attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
-			}
-
-			const contentEl = el.createEl('table', { cls: 'aside-content' })
-
-			for (const [key, value] of attributes) {
-				const name = key.substring(prefix.length);
-				this.appendAsideAttribute(contentEl, name, value, ctx.sourcePath);
-			}
-
-		});
+		// append attributes to table
+		for (const [key, value] of attributes) {
+			const name = key.substring(prefix.length);
+			this.appendAsideAttribute(contentEl, name, value, ctx.sourcePath);
+		}
 	}
 
 	appendAsideImg(el: HTMLElement, imgLink: string, sourcePath: string) {

@@ -1,5 +1,5 @@
 
-.markdown-reading-view.aside-wide div.block-language-aside {
+div.frontmatter-aside {
     float: right;
     width: 40%;
     margin-top: 0;
@@ -9,7 +9,7 @@
     clear: both;
 }
 
-div.block-language-aside img {
+div.frontmatter-aside img {
     margin: auto;
     margin-bottom: var(--size-4-6);
     border-radius: var(--size-4-1);
@@ -17,12 +17,12 @@ div.block-language-aside img {
     max-height: 400px;
 }
 
-div.block-language-aside p {
+div.frontmatter-aside p {
     margin: 0;
     width: auto;
 }
 
-div.block-language-aside small {
+div.frontmatter-aside small {
     color: var(--text-muted);
 }
 

@@ -1,6 +1,5 @@
-import { App, MarkdownRenderChild, MarkdownRenderer, Notice, Plugin, PluginSettingTab, Setting, TFile, parseYaml } from 'obsidian';
+import { App, MarkdownRenderChild, MarkdownRenderer, Plugin, PluginSettingTab, Setting, parseYaml } from 'obsidian';
 
-const CODEBLOCK_ID = 'aside'
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
 	templatePath: ''
 }
@@ -18,7 +17,7 @@ class AsideSettingTab extends PluginSettingTab {
 	}
 
 	display() {
-		let { containerEl } = this
+		const { containerEl } = this
 
 		containerEl.empty()
 
@@ -56,29 +55,82 @@ export default class AsidePlugin extends Plugin {
 			})
 		}))
 
-		// register aside block processor
-		this.registerMarkdownCodeBlockProcessor(CODEBLOCK_ID, (source, el, ctx) => {
-			ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, source))
-		})
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			
+			// on frontmatter update the following element should exist.
+			// this is a hack but honestly, i don't know what to do.
+			if (!el.querySelector('.frontmatter .language-yaml')) 
+				return;
+			
+			if (!ctx.frontmatter)
+				return;
 
-		// register instert aside command
-		this.addCommand({
-			id: 'insert-aside-command',
-			name: 'Insert Aside',
-			editorCallback: async (editor) => {
-				let yaml = ''
-				if (this.settings.templatePath) {
-					const path = this.settings.templatePath
-					const file = this.app.vault.getAbstractFileByPath(path)
-					if (file === null)
-						new Notice(`Unable to load aside template ${path}`)
-					else if (file instanceof TFile)
-						yaml = await this.app.vault.cachedRead(file)
-				}
-				const block = [ '```' + CODEBLOCK_ID, yaml.trim(), '```' ].join('\n')
-				editor.replaceRange(block, editor.getCursor())
+			const { 
+				'aside-show':show, 
+				'aside-sort':sort = true, 
+				'aside-img':imgLink = null,
+				'aside-prefix':prefix = '',
+			} = ctx.frontmatter; 
+
+			if (show === false)
+				return;
+
+			if (!show && !prefix)
+				return;
+
+
+			// not a fan of this either, but it has to be done.
+			el.addClass('frontmatter-aside')
+
+			if (imgLink) {
+				this.appendAsideImg(el, imgLink, ctx.sourcePath);
 			}
+
+			let attributes = Object.entries(ctx.frontmatter)
+				.filter(([k]) => !k.startsWith('aside-'))
+				.filter(([k]) => k.startsWith(prefix));
+
+			if (sort) {
+				attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
+			}
+
+			const contentEl = el.createEl('table', { cls: 'aside-content' })
+
+			for (const [key, value] of attributes) {
+				const name = key.substring(prefix.length);
+				this.appendAsideAttribute(contentEl, name, value, ctx.sourcePath);
+			}
+
 		});
+	}
+
+	appendAsideImg(el: HTMLElement, imgLink: string, sourcePath: string) {
+		const imgPath = this.getResourceFromLink(imgLink, sourcePath);
+		if (imgPath) {
+			el.createEl('img', { attr: { src: imgPath } })
+		}
+	}
+
+	appendAsideAttribute(el: HTMLElement, name: string, value: unknown, sourcePath: string) {
+		const tr = el.createEl('tr')
+		tr.createEl('td', { text: name });
+		const td = tr.createEl('td');
+
+		const values = Array.isArray(value) ? value : [value];
+
+		values.filter(it => it).forEach(it => {
+			const div = document.createElement('div');
+			MarkdownRenderer.renderMarkdown(String(it), div, sourcePath, null!)
+			td.appendChild(div);
+		});
+	}
+
+	getResourceFromLink(linktext: string, sourcePath: string): string | null {
+		const path = /\[{2}(.+?)\]{2}/.exec(linktext)?.[1];
+		if (!path) return null;
+		const file = app.metadataCache.getFirstLinkpathDest(path, sourcePath);
+		if (!file) return null;
+		return app.vault.getResourcePath(file);
 	}
 
 	onunload() { }
@@ -89,73 +141,5 @@ export default class AsidePlugin extends Plugin {
 
 	async saveSettings() {
 		this.saveData(this.settings)
-	}
-
-}
-
-class AsideRenderChild extends MarkdownRenderChild {
-	app: App
-	element: HTMLElement
-	sourcePath: string
-	sourceText: string
-
-	constructor(app: App, element: HTMLElement, sourcePath: string, sourceText: string) {
-		super(element)
-		this.app = app
-		this.element = element
-		this.sourcePath = sourcePath
-		this.sourceText = sourceText
-	}
-
-	onload() {
-		this.render()
-		this.registerEvent(this.app.metadataCache.on('changed', this.render.bind(this)))
-	}
-
-	render() {
-		
-		try {
-			const yaml: any = parseYaml(this.sourceText)
-
-			this.element.addClass("aside-section")
-
-			console.log(`rendering ${yaml}`)
-
-			if (yaml.thumbnail) {
-				MarkdownRenderer.renderMarkdown(yaml.thumbnail, this.element, this.sourcePath, this)
-			}
-
-			if (yaml.content) {
-				
-				const table = this.element.createEl('table')
-				table.addClass('aside-content')
-
-				const entries = (yaml.sortContent ?? true)
-					? Object.entries(yaml.content).sort()
-					: Object.entries(yaml.content);
-
-				entries.forEach(([key, value]) => {
-					const str = value instanceof Array 
-						? value.join('\n') 
-						: String(value)
-
-					if (str) {
-						const tr = table.createEl('tr')
-						tr.createEl('td', { text: key })
-						const td = tr.createEl('td')
-
-						const extra = str
-							.replace(/\(.+?\)/g, (it: string) => `<small>${it}</small>`)
-							.replace(/\[{2}(.+?#(.+?))\]{2}/g, '[[$1|$2]]')
-
-						MarkdownRenderer.renderMarkdown(extra, td, this.sourcePath, this)
-					}
-				});
-			}
-		} 
-		catch (ex) {
-			const readableError = "Unable to display aside"
-			MarkdownRenderer.renderMarkdown(readableError, this.element, this.sourcePath, this)
-		}
 	}
 }

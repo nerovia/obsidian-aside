@@ -1,61 +1,58 @@
+/* container style -----------------------------------------------------------*/
 
-div.frontmatter-aside {
+.aside-container.aside-compact {
     float: right;
     width: 40%;
     margin-top: 0;
     margin-right: 0;
     margin-left: var(--size-4-6);
     margin-bottom: var(--size-4-6);
+   
     clear: both;
 }
 
-div.frontmatter-aside img {
+.aside-container img {
     margin: auto;
     margin-bottom: var(--size-4-6);
-    border-radius: var(--size-4-1);
+    border-radius: var(--size-4-3);
     display: block;
     max-height: 400px;
+    ;
 }
 
-div.frontmatter-aside p {
+.aside-container p {
     margin: 0;
     width: auto;
 }
 
-div.frontmatter-aside small {
-    color: var(--text-muted);
-}
-
-table.aside-content {
+.aside-container table {
     width: 100%;
     border-style: none;
     margin: 0;
 }
 
-table.aside-content p {
-    margin: 2%;
+
+/* content table style -------------------------------------------------------*/
+
+.aside-content td {
+    border: none;
+    font-size: var(--font-ui-medium);
+    border-top: var(--table-border-width) groove;
 }
 
-/* table.aside-content th {
-    border-style: dotted;
-    border-width: var(--table-border-width);
-    border-left: none;
-    border-right: none;
-    text-align: left;
-} */
-
-table.aside-content td {
-    border-style: dotted;
-    border-width: var(--table-border-width);
-    border-left: none;
-    border-right: none;
-    text-align: left;
-}
-
-table.aside-content tr td:first-child {
-    width: min-content;
-    font-weight: normal;
-    font-style: italic;
+.aside-container td:first-child {
+    color: var(--text-muted)
 }
 
 
+/* collapsed content table overrides -----------------------------------------*/
+
+.aside-content.aside-compact tr {
+    border-top: var(--table-border-width) groove;
+    display: block;
+}
+
+.aside-content.aside-compact td {
+    border: none;
+    display: block;
+}

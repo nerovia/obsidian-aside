@@ -52,12 +52,15 @@ export default class AsidePlugin extends Plugin {
 	}
 
 	onResize() {
-		this.app.workspace.containerEl.querySelectorAll('.markdown-reading-view').forEach(it => {
-			const bounds = it.getBoundingClientRect()
-			if (bounds.width > 600)
-				it.addClass('aside-wide')
-			else
-				it.removeClass('aside-wide')
+		this.app.workspace.containerEl.querySelectorAll('div.aside-container').forEach(it => {
+			// Toggle compact aside style
+			const leafWidth = it.parentElement?.getBoundingClientRect()?.width ?? 0;
+			it.toggleClass('aside-compact', leafWidth > 400);
+
+			// Toggle compact content style
+			const asideWidth = it.getBoundingClientRect().width;
+			const content = it.querySelector('.aside-content');
+			content?.toggleClass('aside-compact', asideWidth < 200)
 		})
 	}
 
@@ -68,51 +71,32 @@ export default class AsidePlugin extends Plugin {
 		if (!el.querySelector('.frontmatter .language-yaml')) 
 			return;
 		
-		// abort if there's no frontmatter
-		if (!ctx.frontmatter)
-			return;
-		
-		// get options for the aside
-		const { 
-			'aside-show':show, 
-			'aside-sort':sort = true, 
-			'aside-img':imgLink = null,
-			'aside-prefix':prefix = '',
-		} = ctx.frontmatter; 
+		const aside = AsideOptions.fromFrontmatter(ctx.frontmatter);
+
+		if (!aside) return;
 		
 		// abort if the aside is explicitly hidden
-		if (show === false)
+		if (aside.show === false)
 			return;
 		
 		// abort if the aside is not implicitly shown.
-		if (!show && !prefix)
+		if (!aside.show && !aside.prefix)
 			return;
 		
 		// i'd rather make a new sibling, but i don't know how.
 		// so i guess we're just hijacking this container for now...
-		el.addClass('frontmatter-aside')
+		el.addClass('aside-container')
 
 		// append portrait image if one is present
-		if (imgLink) {
-			this.appendAsideImg(el, imgLink, ctx.sourcePath);
-		}
-
-		// filter attributes based on prefix
-		let attributes = Object.entries(ctx.frontmatter)
-			.filter(([k]) => !k.startsWith('aside-'))
-			.filter(([k]) => k.startsWith(prefix));
-
-		// sort attributes if specified
-		if (sort) {
-			attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
+		if (aside.imageLink) {
+			this.appendAsideImg(el, aside.imageLink, ctx.sourcePath);
 		}
 
 		// create content table
 		const contentEl = el.createEl('table', { cls: 'aside-content' })
 
 		// append attributes to table
-		for (const [key, value] of attributes) {
-			const name = key.substring(prefix.length);
+		for (const [name, value] of aside.attributes) {
 			this.appendAsideAttribute(contentEl, name, value, ctx.sourcePath);
 		}
 	}
@@ -133,7 +117,9 @@ export default class AsidePlugin extends Plugin {
 
 		values.filter(it => it).forEach(it => {
 			const div = document.createElement('div');
-			MarkdownRenderer.renderMarkdown(String(it), div, sourcePath, null!)
+			const str = String(it)
+				.replace(/\[{2}(.+?#(.+?))\]{2}/g, '[[$1|$2]]');
+			MarkdownRenderer.renderMarkdown(str, div, sourcePath, null!)
 			td.appendChild(div);
 		});
 	}
@@ -154,5 +140,46 @@ export default class AsidePlugin extends Plugin {
 
 	async saveSettings() {
 		this.saveData(this.settings)
+	}
+
+}
+
+
+class AsideOptions {
+	show: boolean | null;
+	sort: boolean;
+	prefix: string;
+	imageLink: string | null;
+	attributes: [string, unknown][]
+	
+	static fromFrontmatter(frontmatter: any): AsideOptions | null {
+		if (!frontmatter)
+			return null;
+		
+		const { 
+			'aside-show':show = null, 
+			'aside-sort':sort = true, 
+			'aside-image':imageLink = null,
+			'aside-prefix':prefix = '',
+		} = frontmatter; 
+		
+		// filter attributes based on prefix
+		let attributes = Object.entries(frontmatter)
+			.filter(([k]) => !k.startsWith('aside-'))
+			.filter(([k]) => k.startsWith(prefix))
+			.map(([k,v]): [string, unknown] => [k.substring(prefix.length),v]);
+
+		// sort attributes if specified
+		if (sort) {
+			attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
+		}
+
+		return { 
+			show: show,
+			sort: sort,
+			imageLink: imageLink,
+			prefix: prefix,
+			attributes: attributes,
+		}
 	}
 }

@@ -98,7 +98,7 @@ class AsideOptions {
 	imageLink: string | null;
 	attributes: [string, unknown][]
 	
-	shouldRender(): Boolean {
+	shouldRender(): boolean {
 		if (this.hide === true)
 			return false;
 		if (this.prefix)
@@ -114,7 +114,7 @@ class AsideOptions {
 		
 		const { 
 			'aside-hide':hide = null, 
-			'aside-sort':sort = true, 
+			'aside-sort':sort = false, 
 			'aside-image':imageLink = null,
 			'aside-prefix':prefix = '',
 		} = frontmatter; 
@@ -187,6 +187,8 @@ class AsideRenderChild extends MarkdownRenderChild {
 	}
 
 	appendAsideAttribute(el: HTMLElement, name: string, value: unknown) {
+		if (!value)
+			return;
 		const tr = el.createEl('tr')
 		tr.createEl('td').createEl('p', { text: name });
 		const td = tr.createEl('td');

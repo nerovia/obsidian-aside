@@ -76,14 +76,13 @@ export default class AsidePlugin extends Plugin {
 		if (!aside) return;
 		
 		// abort if the aside is explicitly hidden
-		if (aside.show === false)
+		if (aside.hide === true)
 			return;
 		
 		// abort if the aside is not implicitly shown.
-		if (!aside.show && !aside.prefix)
+		if (!aside.prefix)
 			return;
 
-		
 		ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
 	}
 
@@ -101,7 +100,7 @@ export default class AsidePlugin extends Plugin {
 
 
 class AsideOptions {
-	show: boolean | null;
+	hide: boolean | null;
 	sort: boolean;
 	prefix: string;
 	imageLink: string | null;
@@ -112,7 +111,7 @@ class AsideOptions {
 			return null;
 		
 		const { 
-			'aside-show':show = null, 
+			'aside-hide':hide = null, 
 			'aside-sort':sort = true, 
 			'aside-image':imageLink = null,
 			'aside-prefix':prefix = '',
@@ -130,7 +129,7 @@ class AsideOptions {
 		}
 
 		return { 
-			show: show,
+			hide: hide,
 			sort: sort,
 			imageLink: imageLink,
 			prefix: prefix,
@@ -200,9 +199,14 @@ class AsideRenderChild extends MarkdownRenderChild {
 
 	getResourceFromLink(linktext: string): string | null {
 		const path = /\[{2}(.+?)\]{2}/.exec(linktext)?.[1];
-		if (!path) return null;
-		const file = app.metadataCache.getFirstLinkpathDest(path, this.sourcePath);
-		if (!file) return null;
-		return app.vault.getResourcePath(file);
+		if (path) {
+			const file = app.metadataCache.getFirstLinkpathDest(path, this.sourcePath);
+			if (!file) 
+				return null;
+			return app.vault.getResourcePath(file);
+		}
+		else {
+			return linktext;
+		}
 	}
 }

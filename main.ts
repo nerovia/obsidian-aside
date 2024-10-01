@@ -1,4 +1,5 @@
 import { App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownRenderer, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { isNullOrUndefined } from 'util';
 
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
 	templatePath: ''
@@ -73,17 +74,8 @@ export default class AsidePlugin extends Plugin {
 		
 		const aside = AsideOptions.fromFrontmatter(ctx.frontmatter);
 
-		if (!aside) return;
-		
-		// abort if the aside is explicitly hidden
-		if (aside.hide === true)
-			return;
-		
-		// abort if the aside is not implicitly shown.
-		if (!aside.prefix)
-			return;
-
-		ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
+		if (aside?.shouldRender())
+			ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
 	}
 
 	onunload() { }
@@ -106,6 +98,16 @@ class AsideOptions {
 	imageLink: string | null;
 	attributes: [string, unknown][]
 	
+	shouldRender(): Boolean {
+		if (this.hide === true)
+			return false;
+		if (this.prefix)
+			return true;
+		if (this.imageLink)
+			return true;
+		return false;
+	}
+
 	static fromFrontmatter(frontmatter: any): AsideOptions | null {
 		if (!frontmatter)
 			return null;
@@ -128,13 +130,16 @@ class AsideOptions {
 			attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
 		}
 
-		return { 
+		const aside = new AsideOptions();
+		Object.assign(aside, { 
 			hide: hide,
 			sort: sort,
 			imageLink: imageLink,
 			prefix: prefix,
 			attributes: attributes,
-		}
+		});
+
+		return aside;
 	}
 }
 

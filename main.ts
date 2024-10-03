@@ -1,4 +1,5 @@
 import { App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownRenderer, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { isNullOrUndefined } from 'util';
 
 const DEFAULT_SETTINGS: Partial<AsidePluginSettings> = {
 	templatePath: ''
@@ -73,18 +74,8 @@ export default class AsidePlugin extends Plugin {
 		
 		const aside = AsideOptions.fromFrontmatter(ctx.frontmatter);
 
-		if (!aside) return;
-		
-		// abort if the aside is explicitly hidden
-		if (aside.show === false)
-			return;
-		
-		// abort if the aside is not implicitly shown.
-		if (!aside.show && !aside.prefix)
-			return;
-
-		
-		ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
+		if (aside?.shouldRender())
+			ctx.addChild(new AsideRenderChild(this.app, el, ctx.sourcePath, aside));
 	}
 
 	onunload() { }
@@ -101,19 +92,29 @@ export default class AsidePlugin extends Plugin {
 
 
 class AsideOptions {
-	show: boolean | null;
+	hide: boolean | null;
 	sort: boolean;
 	prefix: string;
 	imageLink: string | null;
 	attributes: [string, unknown][]
 	
+	shouldRender(): boolean {
+		if (this.hide === true)
+			return false;
+		if (this.prefix)
+			return true;
+		if (this.imageLink)
+			return true;
+		return false;
+	}
+
 	static fromFrontmatter(frontmatter: any): AsideOptions | null {
 		if (!frontmatter)
 			return null;
 		
 		const { 
-			'aside-show':show = null, 
-			'aside-sort':sort = true, 
+			'aside-hide':hide = null, 
+			'aside-sort':sort = false, 
 			'aside-image':imageLink = null,
 			'aside-prefix':prefix = '',
 		} = frontmatter; 
@@ -129,13 +130,16 @@ class AsideOptions {
 			attributes = attributes.sort(([a], [b]) => a.localeCompare(b));
 		}
 
-		return { 
-			show: show,
+		const aside = new AsideOptions();
+		Object.assign(aside, { 
+			hide: hide,
 			sort: sort,
 			imageLink: imageLink,
 			prefix: prefix,
 			attributes: attributes,
-		}
+		});
+
+		return aside;
 	}
 }
 
@@ -183,6 +187,8 @@ class AsideRenderChild extends MarkdownRenderChild {
 	}
 
 	appendAsideAttribute(el: HTMLElement, name: string, value: unknown) {
+		if (!value)
+			return;
 		const tr = el.createEl('tr')
 		tr.createEl('td').createEl('p', { text: name });
 		const td = tr.createEl('td');
@@ -200,9 +206,14 @@ class AsideRenderChild extends MarkdownRenderChild {
 
 	getResourceFromLink(linktext: string): string | null {
 		const path = /\[{2}(.+?)\]{2}/.exec(linktext)?.[1];
-		if (!path) return null;
-		const file = app.metadataCache.getFirstLinkpathDest(path, this.sourcePath);
-		if (!file) return null;
-		return app.vault.getResourcePath(file);
+		if (path) {
+			const file = app.metadataCache.getFirstLinkpathDest(path, this.sourcePath);
+			if (!file) 
+				return null;
+			return app.vault.getResourcePath(file);
+		}
+		else {
+			return linktext;
+		}
 	}
 }
